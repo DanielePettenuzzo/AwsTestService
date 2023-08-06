@@ -1,0 +1,111 @@
+name: CI
+on: push
+
+jobs:
+  lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install conan, meson, ninja and gcovr
+        uses: ./.github/actions/setup
+
+      - name: Install cppcheck
+        run: sudo apt install cppcheck
+
+      - name: Generate compilation database
+        run: CONFIGURE_ONLY=1 conan build -b missing .
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+
+      - name: Run commitlint
+        uses: wagoid/commitlint-github-action@v5
+
+  build:
+    runs-on: ubuntu-20.04
+    needs: lint
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install conan, meson, ninja and gcovr
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: conan build -b missing .
+
+  test:
+    runs-on: ubuntu-20.04
+    needs: build
+    env:
+      BUILD_WRAPPER_OUT_DIR: bw-output # Directory where build-wrapper output will be placed
+      BUILD_DIR: build/Debug # Directory where the build will be placed
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install conan, meson, ninja and gcovr
+        uses: ./.github/actions/setup
+
+      - name: Setup sonar cloud
+        uses: SonarSource/sonarcloud-github-c-cpp@v1.3.2
+
+      - name: Build with build-wrapper
+        env:
+          BUILD_CMD: conan build -b missing -o cpp-template/*:build_coverage=True -pr debug .
+        run: build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} ${{ env.BUILD_CMD }}
+
+      - name: Run tests and generate coverage
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ninja test
+          ninja coverage
+
+      - name: Run sonar-scanner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
+            --define sonar.coverageReportPaths=${{ env.BUILD_DIR }}/meson-logs/sonarqube.xml
+
+  sanitize:
+    runs-on: ubuntu-22.04
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sanitizer: address
+          - sanitizer: thread
+          - sanitizer: undefined
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install conan, meson, ninja and gcovr
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: conan build -b missing -o cpp-template/*:sanitizer=${{ matrix.sanitizer }} -pr clang .
+
+      - name: Run tests
+        run: UBSAN_OPTIONS=halt_on_error=1 ninja test -C build/RelWithDebInfo
+
+  docs:
+    name: Generate documentation
+    runs-on: ubuntu-20.04
+    needs: [test, sanitize]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Generate documentation
+        uses: mattnotmitt/doxygen-action@v1.9.5
+        with:
+          working-directory: docs
+          doxyfile-path: Doxyfile
+      - name: Upload documentation as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+          path: docs/html
