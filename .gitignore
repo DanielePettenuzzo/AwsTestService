@@ -263,4 +263,8 @@ cython_debug/
 # Ignore docs/html folder
 docs/html
 
+# Ignore terraform
+.terraform*
+terraform.tfstate*
+
 # End of https://www.toptal.com/developers/gitignore/api/c++,visualstudiocode,python,meson,sonar,sonarqube
