@@ -1,6 +1,11 @@
+app_lib_deps = [
+    cpp_template_dep,
+    dependency('restinio')
+]
+
 executable(
     'awesome-app',
     'main.cpp',
     install: true,
-    dependencies: [cpp_template_dep],
+    dependencies: app_lib_deps
 )

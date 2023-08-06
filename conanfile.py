@@ -27,7 +27,11 @@ class CppTemplateConan(ConanFile):
     }
     exports_sources = "*", "!build*", "!docs*"
     generators = "PkgConfigDeps"
-    requires = "spdlog/1.11.0"
+    requires = [
+        "spdlog/1.11.0",
+        "restinio/0.6.18"
+    ]
+
     test_requires = ["doctest/2.4.10"]
 
     def layout(self):
