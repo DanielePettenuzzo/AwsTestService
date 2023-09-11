@@ -5,7 +5,7 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: lint
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install conan, meson, ninja and gcovr
         uses: ./.github/actions/setup
@@ -43,7 +43,7 @@ jobs:
       BUILD_WRAPPER_OUT_DIR: bw-output # Directory where build-wrapper output will be placed
       BUILD_DIR: build/Debug # Directory where the build will be placed
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install conan, meson, ninja and gcovr
         uses: ./.github/actions/setup
@@ -82,7 +82,7 @@ jobs:
           - sanitizer: thread
           - sanitizer: undefined
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install conan, meson, ninja and gcovr
         uses: ./.github/actions/setup
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [test, sanitize]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Generate documentation
         uses: mattnotmitt/doxygen-action@v1.9.5
         with:
